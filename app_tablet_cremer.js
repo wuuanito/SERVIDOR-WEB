@@ -14,7 +14,7 @@ const io = socketIO(server, {
     }
 });
 
-const port = 1080;
+const port = 2050;
 const ipAddress = 'localhost';
 const distDir = path.join(__dirname, 'paginaFrontend');
 const indexPath = path.join(distDir, 'index.html');
