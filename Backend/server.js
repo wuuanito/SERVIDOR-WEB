@@ -29,46 +29,51 @@ const dbConfig = {
 app.use(express.static('public'));
 
 // Endpoint para buscar órdenes de fabricación
+// Endpoint para buscar órdenes de fabricación
 app.post('/api/search', async (req, res) => {
-  try {
-    const searchTerm = req.body.term || '';
-    
-    // Conectar a la base de datos
-    await sql.connect(dbConfig);
-    
-    // Preparar y ejecutar la consulta
-    const query = `
-      SELECT CodManufacturingOrder, Description, Quantity 
-      FROM CPRManufacturingOrder 
-      WHERE CodManufacturingOrder LIKE @searchTerm 
-      ORDER BY CodManufacturingOrder
-    `;
-    
-    const request = new sql.Request();
-    request.input('searchTerm', sql.VarChar, '%' + searchTerm + '%');
-    
-    const result = await request.query(query);
-    
-    // Formatear los resultados para el autocompletado
-    const formattedResults = result.recordset.map(item => ({
-      label: item.CodManufacturingOrder,
-      value: item.CodManufacturingOrder,
-      description: item.Description,
-      quantity: item.Quantity
-    }));
-    
-    // Devolver los resultados como JSON
-    res.json(formattedResults);
-    
-  } catch (err) {
-    console.error('Error en la consulta:', err);
-    res.status(500).json({ error: err.message });
-  } finally {
-    // Cerrar la conexión
-    sql.close();
-  }
-});
-
+    try {
+      const searchTerm = req.body.term || '';
+      
+      // Conectar a la base de datos
+      await sql.connect(dbConfig);
+      
+      // Preparar y ejecutar la consulta actualizada con JOIN
+      const query = `
+        SELECT CPRManufacturingOrder.CodManufacturingOrder, 
+               CPRManufacturingOrder.Description,
+               CPRManufacturingOrder.Quantity, 
+               STKArticle.CodArticle 
+        FROM CPRManufacturingOrder 
+        JOIN STKArticle ON CPRManufacturingOrder.IDArticle = STKArticle.IDArticle
+        WHERE CPRManufacturingOrder.CodManufacturingOrder LIKE @searchTerm 
+        ORDER BY CPRManufacturingOrder.CodManufacturingOrder
+      `;
+      
+      const request = new sql.Request();
+      request.input('searchTerm', sql.VarChar, '%' + searchTerm + '%');
+      
+      const result = await request.query(query);
+      
+      // Formatear los resultados para el autocompletado incluyendo el código de artículo
+      const formattedResults = result.recordset.map(item => ({
+        label: item.CodManufacturingOrder,
+        value: item.CodManufacturingOrder,
+        description: item.Description,
+        quantity: item.Quantity,
+        codArticle: item.CodArticle
+      }));
+      
+      // Devolver los resultados como JSON
+      res.json(formattedResults);
+      
+    } catch (err) {
+      console.error('Error en la consulta:', err);
+      res.status(500).json({ error: err.message });
+    } finally {
+      // Cerrar la conexión
+      sql.close();
+    }
+  });
 // Endpoint para probar la conexión
 app.post('/api/test-connection', async (req, res) => {
   try {
